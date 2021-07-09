@@ -27,15 +27,13 @@ async function setPublicPermissions(newPermissions) {
   const publicRole = await strapi
     .query("role", "users-permissions")
     .findOne({ type: "public" });
-  
-  console.log("query result from role and users-permission", await strapi.query("role", "users-permissions"))
-  console.log("publicRole is", publicRole)
+
   // List all available permissions
   const publicPermissions = await strapi
     .query("permission", "users-permissions")
     .find({
       type: ["users-permissions", "application"],
-      role: publicRole.myId,
+      role: publicRole.id,
     });
 
   // Update permission to match new config
@@ -55,7 +53,7 @@ async function setPublicPermissions(newPermissions) {
       // Enable the selected permissions
       return strapi
         .query("permission", "users-permissions")
-        .update({ id: permission.myId }, { enabled: true })
+        .update({ id: permission.id }, { enabled: true })
     });
   await Promise.all(updatePromises);
 }
@@ -170,22 +168,4 @@ module.exports = async () => {
       console.error(error);
     }
   }
-};
-
-module.exports = () => {
-  strapi.app.use(async (ctx, next) => {
-      try {
-          console.log("ctx inside config.functions.bootstrap.js", ctx.request.body)
-          // const strapiUserPermissions = await strapi.plugins['users-permissions'].services
-          // console.log("await strapi.plugins['users-permissions'].services", strapiUserPermissions)
-          await next();
-      } catch(err) {
-          console.log("err inside bootstrap is called", err.code);
-          if(err.code === 11000) {
-              ctx.badData(`Duplicate value for ${Object.keys(err.keyPattern)}`);
-          } else {
-              throw err;
-          }
-      }
-  });
 };
