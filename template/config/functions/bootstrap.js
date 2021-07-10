@@ -120,14 +120,64 @@ async function importWriters() {
   }));
 }
 
-async function importArticles() {
-  return Promise.all(articles.map((article) => {
-    const files = {
-      image: getFileData(`${article.slug}.jpg`),
+// Randomly set relations on Article to avoid error with MongoDB
+async function getArticleRelation() {
+  const categories = await strapi.query("category").find();
+  const authors = await strapi.query("writer").find();
+  const isMongoose = strapi.config.connections.default.connector == "mongoose";
+
+  if (isMongoose) {
+    return {
+      category: {
+        _id: categories[Math.floor(Math.random() * categories.length)].id,
+      },
+      author: {
+        _id: authors[Math.floor(Math.random() * authors.length)].id,
+      },
     };
-    return createEntry({ model: "article", entry: article, files });
-  }));
+  }
+
+  return {
+    category: {
+      id: categories[Math.floor(Math.random() * categories.length)].id,
+    },
+    author: {
+      id: authors[Math.floor(Math.random() * authors.length)].id,
+    },
+  };
 }
+
+
+async function importArticles() {
+  const relations = await getArticleRelation();
+  
+  return Promise.all(
+    articles.map((article) => {
+      const files = {
+        image: getFileData(`${article.slug}.jpg`),
+      };
+
+      return createEntry({
+        model: "article",
+        entry: {
+          ...article,
+          ...relations,
+        },
+        files,
+      });
+    })
+  );
+}
+
+
+// async function importArticles() {
+//   return Promise.all(articles.map((article) => {
+//     const files = {
+//       image: getFileData(`${article.slug}.jpg`),
+//     };
+//     return createEntry({ model: "article", entry: article, files });
+//   }));
+// }
 
 async function importGlobal() {
   const files = {
